@@ -6,6 +6,7 @@
 import { el, empty } from './lib/elements.js';
 import { weatherSearch } from './lib/weather.js';
 
+
 /**
  * @typedef {Object} SearchLocation
  * @property {string} title
@@ -72,17 +73,27 @@ function renderResults(location, results) {
     'tr',
     {},
     el('th', {}, 'Tími'),
-    el('th', {}, 'Hiti'),
-    el('th', {}, 'Úrkoma'),
+    el('th', {}, 'Hiti [˚C]'),
+    el('th', {}, 'Úrkoma [mm]'),
   );
   console.log(results);
-  const body = el(
-    'tr',
-    {},
-    el('td', {}, 'Tími'),
-    el('td', {}, 'Hiti'),
-    el('td', {}, 'Úrkoma'),
-  );
+  const body = el('tbody', {});
+  for(const result of results){
+    console.log(result);
+    const { time, precipitation, temperature } = result;
+
+    const timeDate = new Date(time);
+    const timeString = timeDate.toTimeString().slice(0,5);
+
+    const temp = el(
+      'tr',
+      {},
+      el('td', {}, timeString),
+      el('td', {}, temperature.toFixed(1)),
+      el('td', {}, precipitation.toFixed(1)),
+    );
+    body.appendChild(temp);
+  }
 
   const resultsTable = el('table', { class: 'forecast' }, header, body);
 
@@ -141,6 +152,19 @@ async function onSearch(location) {
  */
 async function onSearchMyLocation() {
   // TODO útfæra
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      onSearch({ 
+        title: 'Þín staðsetning', 
+        lat:  position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    },
+    (error)=>{
+      console.error(error)
+      renderError(error);
+    }
+  );
 }
 
 /**
@@ -188,11 +212,16 @@ function render(container, locations, onSearch, onSearchMyLocation) {
   // Búum til <header> með beinum DOM aðgerðum
   const headerElement = document.createElement('header');
   const heading = document.createElement('h1');
-  heading.appendChild(document.createTextNode('<fyrirsögn>'));
+  heading.appendChild(document.createTextNode('Weather!'));
   headerElement.appendChild(heading);
   parentElement.appendChild(headerElement);
 
   // TODO útfæra inngangstexta
+  const introElement = document.createElement('div');
+  introElement.classList.add('intro');
+  introElement.appendChild(document.createTextNode('Welcome to the weather website!! Here you can Look up the weather for various locations.'));
+  parentElement.appendChild(introElement);
+
   // Búa til <div class="loctions">
   const locationsElement = document.createElement('div');
   locationsElement.classList.add('locations');
@@ -207,11 +236,14 @@ function render(container, locations, onSearch, onSearchMyLocation) {
   // <div class="loctions"><ul class="locations__list"><li><li><li></ul></div>
   for (const location of locations) {
     const liButtonElement = renderLocationButton(location.title, () => {
-      console.log('Halló!!', location);
       onSearch(location);
     });
     locationsListElement.appendChild(liButtonElement);
   }
+  const yourLocationButton = renderLocationButton('Þín staðsetning',()=>{ 
+    onSearchMyLocation()
+  });
+  locationsListElement.appendChild(yourLocationButton);
 
   parentElement.appendChild(locationsElement);
 
